@@ -32,12 +32,16 @@ def download_url(url, output_path):
 class ASTParser():
     import logging
     LOGGER = logging.getLogger('ASTParser')
-    def __init__(self, language=None):
+    def __init__(self, language='java'):
         # ------------ To initialize for the treesitter parser ------------
         home = str(Path.home())
         cd = os.getcwd()
         plat = platform.system()     
         p = path.join(home, ".tree-sitter")
+        # os.chdir(path.join(p, "tree-sitter-parsers-" + plat))
+        os.chdir(path.join(p, "bin"))
+        self.languages = {}
+        #  download
         if not path.exists(p):
             os.makedirs(p, exist_ok=True)
             zip_url = "https://github.com/yijunyu/tree-sitter-parsers/archive/refs/heads/" + plat + ".zip"
@@ -63,29 +67,30 @@ class ASTParser():
                         # Include one or more languages
                         langs
                     )
-        os.chdir(path.join(p, "tree-sitter-parsers-" + plat))
-        self.Languages = {}
+
         for file in glob.glob("*.so"):
-          try:
-            lang = os.path.splitext(file)[0]
-            self.Languages[lang] = Language(path.join(p, "tree-sitter-parsers-" + plat, file), lang)
-          except:
-            print("An exception occurred to {}".format(lang))
+            try:
+                lang = os.path.splitext(file)[0]
+                # self.Languages[lang] = Language(path.join(p, "tree-sitter-parsers-" + plat, file), lang)
+                self.languages[lang] = Language(path.join(p, "bin", file), lang)
+            except Exception as e:
+                print("An exception occurred to {}".format(lang), e)
         os.chdir(cd)
         self.parser = Parser()
-        
+
         self.language = language
         if self.language == None:
-            self.LOGGER.info("Cannot find language configuration, using java parser as the default to parse the code into AST")
+            logging.info(
+                "Cannot find language configuration, using java parser as the default to parse the code into AST")
             self.language = "java"
 
-        lang = self.Languages.get(self.language)
+        lang = self.languages.get(self.language)
         self.parser.set_language(lang)
         # -----------------------------------------------------------------
 
        
     def parse_with_language(self, code_snippet, language):
-        lang = self.Languages.get(language)
+        lang = self.languages.get(language)
         self.parser.set_language(lang)
         return self.parser.parse(code_snippet)
 
@@ -93,6 +98,7 @@ class ASTParser():
         return self.parser.parse(code_snippet)
     
     def set_language(self, language):
-        lang = self.Languages.get(language)
+        lang = self.languages.get(language)
         self.parser.set_language(lang)
+        return lang
 
